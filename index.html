@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Humanizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Literata:opsz,wght@7..72,400;7..72,500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDF0F5; --paper:#FFFFFF; --ink:#1B2655; --soft:#5A6385; --line:#CDD3E2;
+  --mark:#F6D84A; --markInk:#1B2655; --err:#B42318;
+  --ui:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --read:"Literata", Georgia, "Times New Roman", serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#10152B; --paper:#18203D; --ink:#E6EAF7; --soft:#9AA3C4; --line:#2C3659;
+    --mark:#E9C93A; --markInk:#10152B; --err:#FF8A7A;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10152B; --paper:#18203D; --ink:#E6EAF7; --soft:#9AA3C4; --line:#2C3659;
+  --mark:#E9C93A; --markInk:#10152B; --err:#FF8A7A;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--ui);font-size:16px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding:clamp(20px,4vw,48px) clamp(16px,4vw,40px) 48px}
+
+header{display:grid;gap:10px;margin-bottom:clamp(24px,4vw,40px)}
+h1{font-weight:800;font-size:clamp(2.2rem,6vw,4.4rem);line-height:.98;letter-spacing:-.03em;margin:0;max-width:14ch}
+h1 .strike{position:relative;color:var(--soft);font-weight:600}
+h1 .strike::after{content:"";position:absolute;left:-2%;right:-2%;top:54%;height:.09em;background:var(--ink);transform:rotate(-2deg)}
+h1 .hand{background:linear-gradient(transparent 58%, var(--mark) 58%, var(--mark) 92%, transparent 92%);padding:0 .08em}
+.lede{color:var(--soft);max-width:56ch;margin:6px 0 0;font-size:1.05rem}
+
+.controls{display:flex;flex-wrap:wrap;gap:18px 28px;align-items:flex-end;margin-bottom:18px}
+.group{display:grid;gap:6px}
+.group > span{font-size:.85rem;color:var(--soft);font-weight:600}
+.seg{display:inline-flex;border:1.5px solid var(--ink);border-radius:999px;overflow:hidden;background:var(--paper)}
+.seg button{all:unset;cursor:pointer;padding:7px 14px;font-size:.92rem;font-weight:600;color:var(--ink)}
+.seg button + button{border-left:1.5px solid var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.seg button:focus-visible{outline:3px solid var(--mark);outline-offset:-3px}
+
+.voice{background:var(--paper);border:1.5px dashed var(--line);border-radius:6px;padding:12px 16px;margin-bottom:20px}
+.voice summary{cursor:pointer;font-weight:700}
+.voice summary:focus-visible{outline:3px solid var(--mark);outline-offset:2px}
+.voice p{color:var(--soft);font-size:.92rem;margin:8px 0;max-width:70ch}
+.voice textarea{min-height:110px;padding:10px 12px;border:1.5px solid var(--line);border-radius:4px;font-size:.98rem}
+.keyrow{display:flex;flex-wrap:wrap;gap:10px}
+.keyrow input,.keyrow select{font-family:var(--ui);font-size:.95rem;color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:4px;padding:9px 12px}
+.keyrow input{flex:1 1 260px;min-width:0}
+.keyrow input:focus,.keyrow select:focus{outline:3px solid var(--mark);outline-offset:1px}
+.remember{display:flex;gap:8px;align-items:center;margin-top:10px;font-size:.9rem;color:var(--soft)}
+footer{margin-top:40px;color:var(--soft);font-size:.85rem}
+.panes{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media (max-width:820px){.panes{grid-template-columns:1fr}}
+.pane{background:var(--paper);border:1.5px solid var(--line);border-radius:6px;display:flex;flex-direction:column;min-height:420px}
+.pane.out{border-color:var(--ink);border-radius:6px 6px 22px 6px}
+.pane-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1.5px solid var(--line);gap:12px}
+.pane.out .pane-head{border-bottom-color:var(--ink)}
+.pane-head h2{margin:0;font-size:1rem;font-weight:700}
+.count{font-size:.85rem;color:var(--soft);white-space:nowrap}
+textarea,.result{flex:1;width:100%;border:0;resize:vertical;background:transparent;color:var(--ink);
+  font-family:var(--read);font-size:1.06rem;line-height:1.72;padding:16px 18px;min-height:340px;unicode-bidi:plaintext}
+textarea:focus{outline:none}
+.pane:focus-within{box-shadow:0 0 0 3px var(--mark)}
+textarea::placeholder{color:var(--soft);opacity:.8}
+.result{white-space:pre-wrap;overflow-wrap:anywhere;overflow:auto}
+.result.empty{color:var(--soft);font-style:italic}
+.result.err{color:var(--err);font-style:normal}
+
+.actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:20px}
+.btn{font-family:var(--ui);font-size:1rem;font-weight:700;cursor:pointer;border-radius:999px;padding:12px 24px;border:1.5px solid var(--ink);background:transparent;color:var(--ink)}
+.btn.primary{background:var(--ink);color:var(--bg);padding:14px 30px;font-size:1.08rem}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:focus-visible{outline:3px solid var(--mark);outline-offset:2px}
+.btn.small{padding:6px 14px;font-size:.88rem}
+.status{color:var(--soft);font-size:.92rem}
+.hidden{display:none !important}
+.notice{margin-top:16px;color:var(--soft);font-size:.9rem;max-width:70ch}
+@media (prefers-reduced-motion:no-preference){
+  .thinking::after{content:"";display:inline-block;width:1.2em;text-align:left;animation:dots 1.2s steps(4,end) infinite}
+  @keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="strike">Generated.</span> <span class="hand">Written.</span></h1>
+    <p class="lede">Paste stiff or robotic text and get it back sounding like a person wrote it. Same meaning, natural rhythm. Works in English, Arabic and other languages. Uses your own Anthropic API key.</p>
+  </header>
+
+  <div class="controls">
+    <div class="group">
+      <span id="toneLbl">Tone</span>
+      <div class="seg" role="group" aria-labelledby="toneLbl" data-key="tone">
+        <button type="button" data-v="casual">Casual</button>
+        <button type="button" data-v="natural" aria-pressed="true">Natural</button>
+        <button type="button" data-v="professional">Professional</button>
+        <button type="button" data-v="academic">Academic</button>
+      </div>
+    </div>
+    <div class="group">
+      <span id="strLbl">How much to change</span>
+      <div class="seg" role="group" aria-labelledby="strLbl" data-key="strength">
+        <button type="button" data-v="light">Light</button>
+        <button type="button" data-v="medium" aria-pressed="true">Medium</button>
+        <button type="button" data-v="strong">Strong</button>
+      </div>
+    </div>
+    <div class="group">
+      <span id="passLbl">Passes</span>
+      <div class="seg" role="group" aria-labelledby="passLbl" data-key="passes">
+        <button type="button" data-v="1">Quick</button>
+        <button type="button" data-v="2" aria-pressed="true">Deep (2 passes)</button>
+      </div>
+    </div>
+  </div>
+
+  <details class="voice" id="keyBox">
+    <summary>Your Anthropic API key</summary>
+    <p>This site runs entirely in your browser and sends your text straight to Anthropic using your own key. The key is never sent anywhere else. Get one at console.anthropic.com.</p>
+    <div class="keyrow">
+      <input id="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-ant-..." aria-label="Anthropic API key">
+      <select id="model" aria-label="Model">
+        <option value="claude-sonnet-5-5" selected>Sonnet 5.5 (best balance)</option>
+        <option value="claude-opus-5-5">Opus 5.5 (highest quality)</option>
+        <option value="claude-haiku-4-5-20251001">Haiku 4.5 (fastest, cheapest)</option>
+      </select>
+    </div>
+    <label class="remember"><input type="checkbox" id="remember"> Remember key on this device</label>
+  </details>
+
+  <details class="voice">
+    <summary>Match my writing style (optional)</summary>
+    <p>Paste a paragraph or two you wrote yourself. The rewrite will copy your vocabulary, sentence habits and rhythm, which makes it sound much more like you.</p>
+    <textarea id="voice" dir="auto" rows="5" placeholder="Paste a sample of your own writing..." aria-label="Sample of your own writing"></textarea>
+  </details>
+
+  <div class="panes">
+    <section class="pane">
+      <div class="pane-head">
+        <h2>Your text</h2>
+        <span class="count" id="inCount">0 words</span>
+      </div>
+      <textarea id="input" dir="auto" placeholder="Paste the text you want to humanize..." aria-label="Text to humanize"></textarea>
+    </section>
+    <section class="pane out" aria-live="polite">
+      <div class="pane-head">
+        <h2>Humanized</h2>
+        <div style="display:flex;gap:10px;align-items:center">
+          <span class="count" id="outCount"></span>
+          <button class="btn small hidden" id="copyBtn" type="button">Copy</button>
+        </div>
+      </div>
+      <div class="result empty" id="output" dir="auto">The rewritten text will appear here.</div>
+    </section>
+  </div>
+
+  <div class="actions">
+    <button class="btn primary" id="goBtn" type="button">Humanize text</button>
+    <button class="btn hidden" id="stopBtn" type="button">Stop</button>
+    <button class="btn hidden" id="againBtn" type="button">Try another version</button>
+    <button class="btn" id="clearBtn" type="button">Clear</button>
+    <span class="status" id="status"></span>
+  </div>
+
+  <footer>Your text and key go only to Anthropic's API. Nothing is stored on any server.</footer>
+</div>
+
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const input=$("input"), output=$("output"), goBtn=$("goBtn"), stopBtn=$("stopBtn"),
+        againBtn=$("againBtn"), clearBtn=$("clearBtn"), copyBtn=$("copyBtn"),
+        status=$("status"), inCount=$("inCount"), outCount=$("outCount");
+  const opts={tone:"natural",strength:"medium",passes:"2"};
+  let ctl=null, busy=false, lastText="";
+
+  const words = t => (t.trim().match(/\S+/g)||[]).length;
+  input.addEventListener("input",()=>{inCount.textContent=words(input.value)+" words"; refresh();});
+
+  document.querySelectorAll(".seg").forEach(seg=>{
+    seg.addEventListener("click",e=>{
+      const b=e.target.closest("button"); if(!b) return;
+      seg.querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed", x===b?"true":"false"));
+      opts[seg.dataset.key]=b.dataset.v;
+    });
+    seg.querySelectorAll("button").forEach(b=>{ if(!b.hasAttribute("aria-pressed")) b.setAttribute("aria-pressed","false"); });
+  });
+
+  function refresh(){
+    goBtn.disabled = busy || !input.value.trim();
+    againBtn.classList.toggle("hidden", busy || !lastText);
+    stopBtn.classList.toggle("hidden", !busy);
+  }
+
+  const toneGuide={
+    casual:"relaxed and conversational, like a friendly message or blog post; contractions are welcome",
+    natural:"plain, clear and natural, the way a thoughtful person writes everyday prose",
+    professional:"polished and professional but still warm and direct, suited to work emails or reports",
+    academic:"suitable for academic writing: precise and measured, but in a real student's voice rather than a template"
+  };
+  const strengthGuide={
+    light:"Keep the structure and most wording. Only fix phrases that sound robotic or formulaic.",
+    medium:"Rework sentences freely for flow and rhythm while keeping every point and the overall order.",
+    strong:"Rewrite thoroughly in fresh wording and structure, keeping all the meaning, facts and key terms."
+  };
+
+  const keyEl=$("apiKey"), modelEl=$("model"), rememberEl=$("remember"), keyBox=$("keyBox");
+  try{
+    const k=localStorage.getItem("hz_key"); if(k){ keyEl.value=k; rememberEl.checked=true; }
+    const m=localStorage.getItem("hz_model"); if(m) modelEl.value=m;
+  }catch(_){}
+  if(!keyEl.value) keyBox.open=true;
+  function saveKey(){
+    try{
+      if(rememberEl.checked) localStorage.setItem("hz_key",keyEl.value.trim()); else localStorage.removeItem("hz_key");
+      localStorage.setItem("hz_model",modelEl.value);
+    }catch(_){}
+  }
+  keyEl.addEventListener("input",()=>{saveKey();refresh();});
+  rememberEl.addEventListener("change",saveKey);
+  modelEl.addEventListener("change",saveKey);
+
+  async function sample(prompt,{signal,onText}){
+    const key=keyEl.value.trim();
+    if(!key) throw {code:"no_key"};
+    let res;
+    try{
+      res=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST", signal,
+        headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+        body:JSON.stringify({model:modelEl.value,max_tokens:8000,stream:true,messages:[{role:"user",content:prompt}]})
+      });
+    }catch(e){ throw {code: e&&e.name==="AbortError"?"cancelled":"network"}; }
+    if(!res.ok){
+      let msg=""; try{ msg=(await res.json()).error.message; }catch(_){}
+      throw {code: res.status===401?"bad_key":res.status===429?"rate_limited":res.status===529?"overloaded":"api", message:msg};
+    }
+    const reader=res.body.getReader(), dec=new TextDecoder();
+    let buf="", text="", stop="";
+    try{
+      while(true){
+        const {done,value}=await reader.read(); if(done) break;
+        buf+=dec.decode(value,{stream:true});
+        let i;
+        while((i=buf.indexOf("\n"))>=0){
+          const line=buf.slice(0,i).trim(); buf=buf.slice(i+1);
+          if(!line.startsWith("data:")) continue;
+          let ev; try{ ev=JSON.parse(line.slice(5)); }catch(_){ continue; }
+          if(ev.type==="content_block_delta"&&ev.delta&&ev.delta.type==="text_delta"){ text+=ev.delta.text; onText&&onText({text}); }
+          else if(ev.type==="message_delta"&&ev.delta) stop=ev.delta.stop_reason||stop;
+          else if(ev.type==="error") throw {code:"api",message:ev.error&&ev.error.message,text};
+        }
+      }
+    }catch(e){
+      if(e&&e.name==="AbortError") throw {code:"cancelled",text};
+      if(e&&e.code) throw e;
+      throw {code:"network",text};
+    }
+    return {text,truncated:stop==="max_tokens"};
+  }
+
+  const voiceEl=$("voice");
+
+  const rules=`Rules:
+- Write in the same language as the original (Arabic stays Arabic; a mix stays the same mix).
+- Keep the full meaning and every fact, number, name and technical term. Add no new claims.
+- Burstiness: sentence lengths must vary a lot. Put a 4 to 7 word sentence next to a 25+ word one. Never three similar-length sentences in a row.
+- Word choice: prefer the plain, specific word a person would actually say over the "safe", most predictable one. Use concrete wording instead of abstractions.
+- Break template structure: no neat lists of three, no "not only X but also Y", no paired "while X, Y" openers everywhere, no symmetrical paragraphs, no summary sentence closing every paragraph.
+- Vary how sentences and paragraphs begin. Never start two neighbouring sentences the same way. Avoid transition words at the start of sentences (Additionally, Furthermore, Moreover, However, Overall, Ultimately, In addition).
+- Banned words and phrases: delve, tapestry, landscape, realm, leverage, seamless, robust, pivotal, crucial, vital, foster, navigate, showcase, underscore, testament, multifaceted, intricate, comprehensive, ever-evolving, in today's world, it is important to note, it's worth noting, plays a key role, in conclusion, a wide range of. (Avoid their Arabic stock equivalents too.)
+- Use contractions where the tone allows. Let a sentence occasionally start with "And" or "But". A light aside in parentheses is fine.
+- No em dashes, no emojis, no bullet points or headings unless the original had them.
+- Keep paragraph breaks roughly where the original has them.
+- Output ONLY the final text. No intro, notes, labels or quotation marks.`;
+
+  function voiceBlock(){
+    const v=voiceEl.value.trim();
+    return v ? `\nThe author's own writing is below. Imitate their vocabulary level, sentence habits, punctuation habits and rhythm closely, so the result reads like they wrote it. Do not copy its content.\n"""\n${v.slice(0,4000)}\n"""\n` : "";
+  }
+
+  function pass1(text){
+    return `You rewrite text so it reads as if a real person wrote it by hand.
+
+Target tone: ${toneGuide[opts.tone]}.
+Amount of change: ${strengthGuide[opts.strength]}
+${voiceBlock()}
+${rules}
+
+Original text:
+"""
+${text}
+"""`;
+  }
+
+  function pass2(original, draft){
+    return `You are a sharp human editor. The draft below is a rewrite of the original. It still contains patterns typical of machine-written text. Go through it sentence by sentence and fix every remaining tell:
+- sentences of similar length or shape in a row
+- predictable, generic or overly formal word choices
+- tidy parallel structures, lists of three, balanced clauses
+- repeated sentence openers or transition words
+- every paragraph ending in a neat summary
+- anything from the banned list
+
+Target tone: ${toneGuide[opts.tone]}.
+${voiceBlock()}
+${rules}
+
+Original (for meaning only):
+"""
+${original}
+"""
+
+Draft to edit:
+"""
+${draft}
+"""`;
+  }
+
+  const errCopy={
+    no_key:"Add your Anthropic API key above first.",
+    bad_key:"That API key was rejected. Check it and try again.",
+    overloaded:"The model is busy right now. Try again in a minute.",
+    network:"Could not reach Anthropic. Check your connection.",
+    api:"The API returned an error. Check your key's credit balance and try again.",
+    rate_limited:"Too many requests right now. Wait a moment and try again.",
+    cancelled:"Stopped."
+  };
+
+  function show(t){ output.className="result"; output.textContent=t; outCount.textContent=words(t)+" words"; }
+
+  async function run(fresh){
+    const text=input.value.trim(); if(!text||busy) return;
+    busy=true; ctl=new AbortController(); refresh();
+    const total=Number(opts.passes);
+    output.className="result empty"; output.innerHTML='<span class="thinking">Rewriting</span>';
+    copyBtn.classList.add("hidden"); outCount.textContent="";
+    status.textContent= total>1 ? "Pass 1 of 2: rewriting" : "";
+    let current="";
+    try{
+      const r1=await sample(pass1(text),{signal:ctl.signal,onText:({text:t})=>show(t)});
+      current=r1.text.trim(); show(current);
+      if(total>1){
+        status.textContent="Pass 2 of 2: editing out leftover AI patterns";
+        const r2=await sample(pass2(text,current),{signal:ctl.signal,onText:({text:t})=>show(t)});
+        current=r2.text.trim(); show(current);
+        if(r2.truncated) status.textContent="The text was cut short. Try a shorter section at a time.";
+        else status.textContent="Done";
+      } else if(r1.truncated){ status.textContent="The text was cut short. Try a shorter section at a time."; }
+      else status.textContent="Done";
+      lastText=current; copyBtn.classList.remove("hidden");
+    }catch(e){
+      const kept=(e&&e.text)||current;
+      if(kept){ show(kept); lastText=kept; copyBtn.classList.remove("hidden"); status.textContent=errCopy[e&&e.code]||"The rewrite stopped early."; }
+      else { output.className="result err"; output.textContent=errCopy[e&&e.code]||"Something went wrong while rewriting. Try again."; status.textContent=""; }
+      if(e&&e.code==="no_key"){ keyBox.open=true; keyEl.focus(); }
+    }finally{ busy=false; ctl=null; refresh(); }
+  }
+
+  goBtn.onclick=()=>run(false);
+  againBtn.onclick=()=>run(true);
+  stopBtn.onclick=()=>ctl&&ctl.abort();
+  clearBtn.onclick=()=>{
+    if(ctl) ctl.abort();
+    input.value=""; inCount.textContent="0 words"; lastText="";
+    output.className="result empty"; output.textContent="The rewritten text will appear here.";
+    outCount.textContent=""; status.textContent=""; copyBtn.classList.add("hidden"); refresh(); input.focus();
+  };
+  copyBtn.onclick=async()=>{
+    const t=output.textContent;
+    try{ await navigator.clipboard.writeText(t); copyBtn.textContent="Copied"; }
+    catch(_){
+      const r=document.createRange(); r.selectNodeContents(output);
+      const s=getSelection(); s.removeAllRanges(); s.addRange(r);
+      copyBtn.textContent="Selected, press Ctrl+C";
+    }
+    setTimeout(()=>copyBtn.textContent="Copy",1800);
+  };
+
+  refresh();
+})();
+</script>
+</body>
+</html>
